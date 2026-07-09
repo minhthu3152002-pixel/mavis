@@ -1,4 +1,6 @@
-// Simple cache-first service worker so Mavis works offline once opened.
+importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js");
+
+// ---- Offline cache (gộp từ sw.js cũ): cache-first cho Mavis ----
 const CACHE = 'mavis-v1';
 
 self.addEventListener('install', (e) => {

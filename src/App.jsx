@@ -64,6 +64,21 @@ const WATER_TIMES = [9, 11, 14, 16, 20]; // giờ nhắc uống nước
 const rand = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const todayKey = () => new Date().toISOString().slice(0, 10);
 
+// ---------------- Push notifications (OneSignal) ----------------
+const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent || '');
+const isStandalone = () => {
+  try {
+    return (
+      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+      window.navigator.standalone === true
+    );
+  } catch { return false; }
+};
+const notifPermission = () => {
+  try { return typeof Notification !== 'undefined' ? Notification.permission : 'default'; }
+  catch { return 'default'; }
+};
+
 // ---------------- Weather (Open-Meteo, không cần API key) ----------------
 const HCMC = { lat: 10.776, lon: 106.7 }; // fallback: TP.HCM
 
@@ -149,10 +164,22 @@ export default function App() {
   const water = useWater();
   const { hearts, burst } = useHearts();
   const wobbleTimer = useRef(null);
+  const [notifPerm, setNotifPerm] = useState(notifPermission);
 
   useEffect(() => {
     try { localStorage.setItem('mavis_counts', JSON.stringify(count)); } catch {}
   }, [count]);
+
+  const enableNotify = () => {
+    if (!window.OneSignalDeferred) return;
+    window.OneSignalDeferred.push(async (OneSignal) => {
+      await OneSignal.Notifications.requestPermission();
+      setNotifPerm(notifPermission());
+    });
+  };
+
+  const showNotifCta = notifPerm !== 'granted';
+  const iosNeedsInstall = showNotifCta && isIOS() && !isStandalone();
 
   const hour = new Date().getHours();
   const dueWater = useMemo(
@@ -236,6 +263,18 @@ export default function App() {
             );
           })}
         </div>
+
+        {showNotifCta && (
+          iosNeedsInstall ? (
+            <p className="notify-hint">
+              Trên iPhone: thêm app vào Màn hình chính trước, rồi mở lại từ icon để bật thông báo nha 💧
+            </p>
+          ) : (
+            <button className="notify-enable" onClick={enableNotify}>
+              Bật nhắc uống nước 🔔
+            </button>
+          )
+        )}
       </main>
 
       <nav className="actions">

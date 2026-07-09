@@ -9,9 +9,5 @@ createRoot(document.getElementById('root')).render(
   </StrictMode>
 );
 
-// Register service worker for PWA / offline + Add to Home Screen.
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
-  });
-}
+// Service worker is registered by OneSignal's page.js (OneSignalSDKWorker.js),
+// which also imports our offline cache logic — so we don't register one here.
