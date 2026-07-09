@@ -42,6 +42,21 @@ async function buildNotification(type) {
     });
     return { heading: 'Weather 🌤️', body };
   }
+  if (type === 'feed') {
+    return { heading: 'Tới giờ ăn rồi 🍚', body: 'Trưa rồi, Mít đói bụng 🥺 cho Mít ăn miếng đi anh' };
+  }
+  if (type === 'coffee') {
+    return { heading: 'Cà phê nha ☕', body: 'Mít thèm cà phê buổi sáng á, pha cho Mít nha ☕' };
+  }
+  if (type === 'pet') {
+    return { heading: 'Mít nhớ anh 🤲', body: 'Tối rồi, vuốt ve Mít một chút nha 🥺' };
+  }
+  if (type === 'sleep') {
+    return { heading: 'Ngủ ngon nha 😴', body: 'Khuya rồi, đưa Mít đi ngủ nha 🌙' };
+  }
+  if (type === 'flower') {
+    return { heading: 'Tặng hoa đi anh 🌼', body: 'Cuối tuần rồi, tặng Mít bông hoa cho vui nha 🌸' };
+  }
   return null;
 }
 
