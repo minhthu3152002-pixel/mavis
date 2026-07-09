@@ -133,6 +133,19 @@ function useWater() {
   return { done, drink };
 }
 
+// -------- Care log (timestamp lần cuối mỗi hoạt động trong ngày) --------
+function useCareLog() {
+  const key = `mavis_care_${todayKey()}`;
+  const [log, setLog] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(key)) || {}; } catch { return {}; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(key, JSON.stringify(log)); } catch {}
+  }, [key, log]);
+  const mark = (what) => setLog((l) => ({ ...l, [what]: Date.now() }));
+  return { log, mark };
+}
+
 // ------------------------------- Hearts -------------------------------
 let heartId = 0;
 function useHearts() {
@@ -153,84 +166,26 @@ function useHearts() {
   return { hearts, burst };
 }
 
-export default function App() {
-  const [current, setCurrent] = useState(ACTIONS[4]); // mặc định: hello
-  const [message, setMessage] = useState('hi cục cưng ❤️');
-  const [count, setCount] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('mavis_counts')) || {}; } catch { return {}; }
-  });
-  const [wobble, setWobble] = useState(false);
-  const weather = useWeather();
-  const water = useWater();
-  const { hearts, burst } = useHearts();
-  const wobbleTimer = useRef(null);
-  const [notifPerm, setNotifPerm] = useState(notifPermission);
+// =========================== Tabs ===========================
+const TABS = [
+  { key: 'home', emoji: '🐹', label: 'Mít' },
+  { key: 'care', emoji: '💧', label: 'Chăm sóc' },
+  { key: 'guide', emoji: '📖', label: 'Hướng dẫn' },
+];
 
-  useEffect(() => {
-    try { localStorage.setItem('mavis_counts', JSON.stringify(count)); } catch {}
-  }, [count]);
-
-  const enableNotify = () => {
-    if (!window.OneSignalDeferred) return;
-    window.OneSignalDeferred.push(async (OneSignal) => {
-      await OneSignal.Notifications.requestPermission();
-      setNotifPerm(notifPermission());
-    });
-  };
-
-  const showNotifCta = notifPerm !== 'granted';
-  const iosNeedsInstall = showNotifCta && isIOS() && !isStandalone();
-
-  const hour = new Date().getHours();
-  const dueWater = useMemo(
-    () => WATER_TIMES.filter((h) => hour >= h && !water.done.includes(h)),
-    [hour, water.done]
-  );
-
-  const doAction = (action) => {
-    setCurrent(action);
-    setMessage(rand(action.lines));
-    setCount((c) => ({ ...c, [action.key]: (c[action.key] || 0) + 1 }));
-    setWobble(false);
-    requestAnimationFrame(() => setWobble(true));
-    clearTimeout(wobbleTimer.current);
-    wobbleTimer.current = setTimeout(() => setWobble(false), 600);
-    if (action.key === 'love' || action.key === 'flower') burst(7);
-    else burst(3);
-  };
-
-  const petHead = () => {
-    setMessage('hi cục cưng ❤️');
-    burst(5);
-    setWobble(false);
-    requestAnimationFrame(() => setWobble(true));
-    clearTimeout(wobbleTimer.current);
-    wobbleTimer.current = setTimeout(() => setWobble(false), 600);
-  };
-
+// ---------------------------- Home tab ----------------------------
+function HomeTab({
+  current, message, wobble, hearts, doAction, petHead,
+  showNotifCta, iosNeedsInstall, enableNotify,
+}) {
   return (
-    <div className="app">
-      <header className="topbar">
-        <div className="brand">Mavis nè</div>
-        <div className={`weather ${weather ? 'on' : ''}`}>
-          {weather
-            ? <><span className="w-emoji">{weather.emoji}</span><span className="w-text">{weather.text}</span></>
-            : <span className="w-text muted">đang xem thời tiết cho anh…</span>}
-        </div>
-      </header>
-
-      <main className="stage-wrap">
-        {dueWater.length > 0 && (
-          <button className="water-nudge" onClick={() => water.drink(dueWater[0])}>
-            💧 Đến giờ uống nước rồi cục cưng — bấm khi uống xong nha
-          </button>
-        )}
-
+    <div className="tab-view home">
+      <div className="stage-wrap">
         <div className="stage">
           <div className="halo" />
           <img
             src={current.img}
-            alt="Mavis"
+            alt="Mít"
             className={`hamster ${wobble ? 'wobble' : ''}`}
             onClick={petHead}
             draggable={false}
@@ -246,6 +201,55 @@ export default function App() {
 
         <div className="bubble" key={message}>{message}</div>
 
+        {showNotifCta && (
+          iosNeedsInstall ? (
+            <p className="notify-hint">
+              Trên iPhone: thêm app vào Màn hình chính trước, rồi mở lại từ icon để bật thông báo nha 💧
+            </p>
+          ) : (
+            <button className="notify-enable" onClick={enableNotify}>
+              Bật nhắc uống nước 🔔
+            </button>
+          )
+        )}
+      </div>
+
+      <nav className="actions">
+        {ACTIONS.map((a) => (
+          <button key={a.key} className="action" onClick={() => doAction(a)}>
+            <span className="a-emoji">{a.emoji}</span>
+            <span className="a-label">{a.label}</span>
+          </button>
+        ))}
+      </nav>
+    </div>
+  );
+}
+
+// ---------------------------- Care tab ----------------------------
+function CareTab({ weather, water, hour, dueWater, careLog }) {
+  const checklist = [
+    { key: 'food', emoji: '🍚', label: 'Đã cho ăn', done: !!careLog.food },
+    { key: 'water', emoji: '💧', label: 'Đã uống nước', done: water.done.length > 0 },
+    { key: 'pet', emoji: '🫶', label: 'Đã vuốt ve', done: !!careLog.pet },
+  ];
+
+  return (
+    <div className="tab-view care">
+      <div className={`weather ${weather ? 'on' : ''}`}>
+        {weather
+          ? <><span className="w-emoji">{weather.emoji}</span><span className="w-text">{weather.text}</span></>
+          : <span className="w-text muted">đang xem thời tiết cho anh…</span>}
+      </div>
+
+      {dueWater.length > 0 && (
+        <button className="water-nudge" onClick={() => water.drink(dueWater[0])}>
+          💧 Đến giờ uống nước rồi cục cưng — bấm khi uống xong nha
+        </button>
+      )}
+
+      <div className="care-section">
+        <div className="care-title">Nhắc uống nước</div>
         <div className="water-row" aria-label="Nhắc uống nước">
           {WATER_TIMES.map((h) => {
             const drunk = water.done.includes(h);
@@ -263,28 +267,261 @@ export default function App() {
             );
           })}
         </div>
+      </div>
 
-        {showNotifCta && (
-          iosNeedsInstall ? (
-            <p className="notify-hint">
-              Trên iPhone: thêm app vào Màn hình chính trước, rồi mở lại từ icon để bật thông báo nha 💧
-            </p>
-          ) : (
-            <button className="notify-enable" onClick={enableNotify}>
-              Bật nhắc uống nước 🔔
-            </button>
-          )
-        )}
-      </main>
+      <div className="care-section">
+        <div className="care-title">Hôm nay đã chăm gì</div>
+        <ul className="checklist">
+          {checklist.map((c) => (
+            <li key={c.key} className={`check-item ${c.done ? 'done' : ''}`}>
+              <span className="check-box">{c.done ? '✅' : '⬜'}</span>
+              <span className="check-emoji">{c.emoji}</span>
+              <span className="check-label">{c.label}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
 
-      <nav className="actions">
-        {ACTIONS.map((a) => (
-          <button key={a.key} className="action" onClick={() => doAction(a)}>
-            <span className="a-emoji">{a.emoji}</span>
-            <span className="a-label">{a.label}</span>
+// ---------------------------- Guide tab ----------------------------
+const GUIDE_GOALS = [
+  { emoji: '💧', text: 'Uống nước ≥ 1 lần/ngày' },
+  { emoji: '🍚', text: 'Cho ăn ≥ 1 lần/ngày' },
+  { emoji: '🫶', text: 'Vuốt ve mỗi ngày' },
+  { emoji: '☕', text: 'Cà phê buổi sáng' },
+  { emoji: '💕', text: 'Nói yêu mỗi ngày' },
+  { emoji: '🌼', text: 'Tặng hoa ≥ 2 lần/tuần' },
+  { emoji: '😴', text: 'Đưa đi ngủ mỗi tối' },
+  { emoji: '💵', text: 'Cho Mít tiền khi rảnh' },
+];
+
+function GuideTab({ onOpenOnboarding }) {
+  return (
+    <div className="tab-view guide">
+      <div className="care-section">
+        <div className="care-title">Cách chăm Mít</div>
+        <ul className="goal-list">
+          {GUIDE_GOALS.map((g, i) => (
+            <li key={i} className="goal-item">
+              <span className="goal-emoji">{g.emoji}</span>
+              <span className="goal-text">{g.text}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <button className="guide-cta" onClick={onOpenOnboarding}>
+        Xem lại hướng dẫn cài đặt
+      </button>
+    </div>
+  );
+}
+
+// -------------------------- Onboarding popup --------------------------
+function Onboarding({ notifPerm, onEnableNotify, onClose }) {
+  const [step, setStep] = useState(1);
+  const total = 4;
+  const standalone = isStandalone();
+  const granted = notifPerm === 'granted';
+  const next = () => setStep((s) => Math.min(total, s + 1));
+  const back = () => setStep((s) => Math.max(1, s - 1));
+
+  return (
+    <div className="onboard-overlay" role="dialog" aria-modal="true">
+      <div className="onboard-card">
+        <div className="onboard-dots">
+          {[1, 2, 3, 4].map((i) => (
+            <span key={i} className={`dot ${i === step ? 'on' : ''}`} />
+          ))}
+        </div>
+
+        <div className="onboard-body">
+          {step === 1 && (
+            <>
+              <div className="ob-emoji">🐹</div>
+              <h2 className="ob-title">Chào mừng đến với Mít!</h2>
+              <p className="ob-text">
+                Đây là app nhỏ xíu để anh chăm sóc Mít mỗi ngày — cho ăn, uống nước,
+                vuốt ve và nhận những lời nhắc dễ thương 🩷
+              </p>
+            </>
+          )}
+
+          {step === 2 && (
+            <>
+              <div className="ob-emoji">📲</div>
+              <h2 className="ob-title">Thêm Mít vào Màn hình chính</h2>
+              <p className="ob-text">
+                iOS: bấm nút Chia sẻ → “Thêm vào MH chính”.<br />
+                Android: bấm ⋮ → “Cài đặt ứng dụng”.
+              </p>
+              <p className="ob-text">Rồi mở Mít lại từ icon vừa thêm nha.</p>
+              {standalone && <div className="ob-done">✓ Đã mở từ Màn hình chính rồi, tuyệt vời!</div>}
+            </>
+          )}
+
+          {step === 3 && (
+            <>
+              <div className="ob-emoji">🔔</div>
+              <h2 className="ob-title">Bật thông báo</h2>
+              <p className="ob-text">
+                Cho phép thông báo để Mít nhắc anh uống nước và báo thời tiết mỗi ngày nha.
+              </p>
+              {granted
+                ? <div className="ob-done">✓ Đã bật thông báo rồi 🩷</div>
+                : <button className="notify-enable" onClick={onEnableNotify}>Bật thông báo 🔔</button>}
+            </>
+          )}
+
+          {step === 4 && (
+            <>
+              <div className="ob-emoji">🩷</div>
+              <h2 className="ob-title">Mít chào anh</h2>
+              <p className="ob-text">
+                Welcome anh đến với app vibe code đầu tiên của em 🥹 Hãy chăm sóc Mít nhé 🩷
+              </p>
+            </>
+          )}
+        </div>
+
+        <div className="onboard-actions">
+          {step > 1 && step < total && (
+            <button className="ob-back" onClick={back}>Quay lại</button>
+          )}
+          {step < total && (
+            <button className="ob-next" onClick={next}>Tiếp tục</button>
+          )}
+          {step === total && (
+            <button className="ob-next" onClick={onClose}>Bắt đầu</button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function App() {
+  const [tab, setTab] = useState('home');
+  const [current, setCurrent] = useState(ACTIONS[4]); // mặc định: hello
+  const [message, setMessage] = useState('hi cục cưng ❤️');
+  const [count, setCount] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('mavis_counts')) || {}; } catch { return {}; }
+  });
+  const [wobble, setWobble] = useState(false);
+  const weather = useWeather();
+  const water = useWater();
+  const care = useCareLog();
+  const { hearts, burst } = useHearts();
+  const wobbleTimer = useRef(null);
+  const [notifPerm, setNotifPerm] = useState(notifPermission);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    try { return !localStorage.getItem('mavis_onboarded'); } catch { return false; }
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem('mavis_counts', JSON.stringify(count)); } catch {}
+  }, [count]);
+
+  const enableNotify = () => {
+    if (!window.OneSignalDeferred) return;
+    window.OneSignalDeferred.push(async (OneSignal) => {
+      await OneSignal.Notifications.requestPermission();
+      setNotifPerm(notifPermission());
+    });
+  };
+
+  const closeOnboarding = () => {
+    try { localStorage.setItem('mavis_onboarded', '1'); } catch {}
+    setShowOnboarding(false);
+  };
+  const openOnboarding = () => setShowOnboarding(true);
+
+  const showNotifCta = notifPerm !== 'granted';
+  const iosNeedsInstall = showNotifCta && isIOS() && !isStandalone();
+
+  const hour = new Date().getHours();
+  const dueWater = useMemo(
+    () => WATER_TIMES.filter((h) => hour >= h && !water.done.includes(h)),
+    [hour, water.done]
+  );
+
+  const doAction = (action) => {
+    setCurrent(action);
+    setMessage(rand(action.lines));
+    setCount((c) => ({ ...c, [action.key]: (c[action.key] || 0) + 1 }));
+    care.mark(action.key);
+    setWobble(false);
+    requestAnimationFrame(() => setWobble(true));
+    clearTimeout(wobbleTimer.current);
+    wobbleTimer.current = setTimeout(() => setWobble(false), 600);
+    if (action.key === 'love' || action.key === 'flower') burst(7);
+    else burst(3);
+  };
+
+  const petHead = () => {
+    setMessage('hi cục cưng ❤️');
+    care.mark('pet');
+    burst(5);
+    setWobble(false);
+    requestAnimationFrame(() => setWobble(true));
+    clearTimeout(wobbleTimer.current);
+    wobbleTimer.current = setTimeout(() => setWobble(false), 600);
+  };
+
+  return (
+    <div className="app">
+      <header className="topbar">
+        <div className="brand">Mít nè</div>
+      </header>
+
+      {tab === 'home' && (
+        <HomeTab
+          current={current}
+          message={message}
+          wobble={wobble}
+          hearts={hearts}
+          doAction={doAction}
+          petHead={petHead}
+          showNotifCta={showNotifCta}
+          iosNeedsInstall={iosNeedsInstall}
+          enableNotify={enableNotify}
+        />
+      )}
+
+      {tab === 'care' && (
+        <CareTab
+          weather={weather}
+          water={water}
+          hour={hour}
+          dueWater={dueWater}
+          careLog={care.log}
+        />
+      )}
+
+      {tab === 'guide' && <GuideTab onOpenOnboarding={openOnboarding} />}
+
+      <nav className="tabbar" aria-label="Điều hướng">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            className={`tab-btn ${tab === t.key ? 'active' : ''}`}
+            onClick={() => setTab(t.key)}
+          >
+            <span className="t-emoji">{t.emoji}</span>
+            <span className="t-label">{t.label}</span>
           </button>
         ))}
       </nav>
+
+      {showOnboarding && (
+        <Onboarding
+          notifPerm={notifPerm}
+          onEnableNotify={enableNotify}
+          onClose={closeOnboarding}
+        />
+      )}
     </div>
   );
 }
