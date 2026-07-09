@@ -19,23 +19,28 @@ function weatherMessage({ code, tmax, pop }) {
   return 'Thời tiết hôm nay dễ chịu lémm 🌤️';
 }
 
+// Gộp mọi khoảng trắng liên tiếp thành 1 space và trim đầu/cuối.
+function normalizeSpace(str) {
+  return String(str == null ? '' : str).replace(/\s+/g, ' ').trim();
+}
+
 async function buildNotification(type) {
   if (type === 'water1') {
-    return { heading: 'Mít nè 💧', body: 'Uống  nước đi 💧' };
+    return { heading: 'Stay hydrated 💧', body: 'Uống nước đi cục cưng 🩷' };
   }
   if (type === 'water2') {
-    return { heading: 'Mít nè 💧', body: 'Anh uống nước chưa 💧' };
+    return { heading: 'Stay hydrated 💧', body: 'Anh uống nước chưa nè 🩷' };
   }
   if (type === 'weather') {
     const res = await fetch(HCMC_WEATHER);
     const data = await res.json();
     const daily = data.daily || {};
-    const body = weatherMessage({
+    const heading = weatherMessage({
       code: (daily.weather_code || [])[0],
       tmax: (daily.temperature_2m_max || [])[0],
       pop: (daily.precipitation_probability_max || [])[0] ?? 0,
     });
-    return { heading: 'Mít nè 🌤️', body };
+    return { heading, body: 'Chúc cục cưng một ngày vui 🌤️' };
   }
   return null;
 }
@@ -113,12 +118,11 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: `Unknown type: ${type}` });
     }
 
-    const sent = await sendPush({
-      appId,
-      apiKey,
-      heading: notification.heading,
-      body: notification.body,
-    });
+    // Chuẩn hoá khoảng trắng; không để headings rỗng (iOS sẽ thay bằng tên app).
+    const heading = normalizeSpace(notification.heading) || 'Mavis';
+    const body = normalizeSpace(notification.body);
+
+    const sent = await sendPush({ appId, apiKey, heading, body });
 
     if (sent.ok) {
       return res.status(200).json({
