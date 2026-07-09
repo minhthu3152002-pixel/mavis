@@ -1,0 +1,14 @@
+{
+  "name": "Mavis nè",
+  "short_name": "Mavis",
+  "description": "Bé hamster nhắc anh uống nước, ăn cơm và nghe lời thương mỗi ngày.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffe9f0",
+  "theme_color": "#ffb7c5",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

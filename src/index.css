@@ -1,0 +1,255 @@
+:root {
+  --pink: #ff8fb1;
+  --pink-deep: #ff6fa5;
+  --pink-soft: #ffc2d4;
+  --cream: #fffaf6;
+  --bg-1: #ffe9f0;
+  --bg-2: #fff4f8;
+  --ink: #7a4b58;
+  --ink-soft: #a97e89;
+  --shadow: 0 10px 30px rgba(255, 122, 162, 0.28);
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body, #root { height: 100%; margin: 0; }
+
+body {
+  font-family: 'Quicksand', system-ui, sans-serif;
+  color: var(--ink);
+  background: linear-gradient(160deg, var(--bg-1), var(--bg-2) 55%, #fff);
+  overscroll-behavior: none;
+  user-select: none;
+}
+
+.app {
+  min-height: 100dvh;
+  max-width: 460px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  padding:
+    calc(env(safe-area-inset-top) + 10px)
+    16px
+    calc(env(safe-area-inset-bottom) + 12px);
+  gap: 8px;
+}
+
+/* ---------- Top bar ---------- */
+.topbar { text-align: center; }
+.brand {
+  font-family: 'Baloo 2', sans-serif;
+  font-weight: 800;
+  font-size: 26px;
+  color: var(--pink-deep);
+  letter-spacing: 0.5px;
+  text-shadow: 0 2px 0 #fff;
+}
+.weather {
+  margin-top: 6px;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--cream);
+  border: 2px solid #ffe0ea;
+  border-radius: 18px;
+  padding: 8px 14px;
+  box-shadow: 0 6px 16px rgba(255, 150, 180, 0.16);
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+.weather.on { animation: pop 0.4s ease; }
+.w-emoji { font-size: 20px; }
+.w-text { color: var(--ink); }
+.muted { color: var(--ink-soft); font-style: italic; }
+
+/* ---------- Stage ---------- */
+.stage-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 0;
+}
+
+.water-nudge {
+  border: none;
+  background: linear-gradient(135deg, #7fd3ff, #4fb8ff);
+  color: #fff;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 13.5px;
+  padding: 11px 16px;
+  border-radius: 16px;
+  box-shadow: 0 8px 18px rgba(79, 184, 255, 0.4);
+  animation: bob 1.6s ease-in-out infinite;
+  cursor: pointer;
+}
+
+.stage {
+  position: relative;
+  width: min(66vw, 260px);
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.halo {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 45%, #fff 0%, #ffe3ee 55%, rgba(255,227,238,0) 72%);
+  box-shadow: inset 0 -10px 30px rgba(255, 170, 195, 0.25);
+}
+.hamster {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 12px 14px rgba(200, 120, 150, 0.28));
+  cursor: pointer;
+  transform-origin: 50% 90%;
+  animation: idle 3.2s ease-in-out infinite;
+}
+.hamster.wobble { animation: wobble 0.6s ease; }
+
+.hearts { position: absolute; inset: 0; pointer-events: none; }
+.hearts span {
+  position: absolute;
+  bottom: 32%;
+  font-size: 26px;
+  animation-name: floatUp;
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
+}
+
+.bubble {
+  background: var(--cream);
+  border: 2.5px solid #ffd8e4;
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 17px;
+  text-align: center;
+  line-height: 1.35;
+  padding: 14px 18px;
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  max-width: 340px;
+  position: relative;
+  animation: pop 0.35s ease;
+}
+.bubble::after {
+  content: '';
+  position: absolute;
+  top: -12px; left: 50%;
+  transform: translateX(-50%);
+  border: 8px solid transparent;
+  border-bottom-color: #ffd8e4;
+}
+
+/* ---------- Water row ---------- */
+.water-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.drop {
+  border: 2px solid #e6f4ff;
+  background: #f5fbff;
+  border-radius: 14px;
+  padding: 6px 8px 5px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 46px;
+  font-family: inherit;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: transform 0.15s ease;
+}
+.drop-ico { font-size: 18px; filter: grayscale(0.5); }
+.drop-time { font-size: 11px; font-weight: 700; color: var(--ink-soft); }
+.drop.due {
+  opacity: 1;
+  border-color: #7fd3ff;
+  background: #eaf7ff;
+  animation: bob 1.4s ease-in-out infinite;
+}
+.drop.drunk {
+  opacity: 1;
+  border-color: var(--pink-soft);
+  background: #fff0f5;
+}
+.drop.drunk .drop-ico { filter: none; }
+.drop.drunk .drop-time { color: var(--pink-deep); }
+.drop:active { transform: scale(0.92); }
+
+/* ---------- Action buttons ---------- */
+.actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 4px;
+}
+.action {
+  border: none;
+  background: var(--cream);
+  border: 2px solid #ffe0ea;
+  border-radius: 20px;
+  padding: 12px 6px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 6px 14px rgba(255, 150, 180, 0.18);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.action:active {
+  transform: translateY(2px) scale(0.97);
+  box-shadow: 0 3px 8px rgba(255, 150, 180, 0.2);
+}
+.a-emoji { font-size: 26px; line-height: 1; }
+.a-label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink);
+  text-align: center;
+  line-height: 1.15;
+}
+
+/* ---------- Animations ---------- */
+@keyframes idle {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-6px) rotate(-1deg); }
+}
+@keyframes wobble {
+  0% { transform: rotate(0); }
+  25% { transform: rotate(-7deg) scale(1.04); }
+  50% { transform: rotate(6deg) scale(1.05); }
+  75% { transform: rotate(-3deg); }
+  100% { transform: rotate(0); }
+}
+@keyframes floatUp {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateY(-160px) scale(1.3); opacity: 0; }
+}
+@keyframes pop {
+  0% { transform: scale(0.9); opacity: 0.4; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hamster, .water-nudge, .drop.due, .weather.on, .bubble { animation: none !important; }
+}
