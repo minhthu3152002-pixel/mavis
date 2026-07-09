@@ -323,6 +323,81 @@ body {
   cursor: pointer;
 }
 
+/* ---------- Drag & drop ---------- */
+.drag-hint {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+.drag-tray {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  max-width: 320px;
+}
+.drag-item {
+  width: 62px;
+  height: 66px;
+  border: 2px solid #ffe0ea;
+  background: var(--cream);
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  box-shadow: 0 6px 14px rgba(255, 150, 180, 0.18);
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 0.12s ease;
+}
+.drag-item:active { cursor: grabbing; transform: scale(0.94); }
+.di-emoji { font-size: 27px; line-height: 1; }
+.di-img { width: 34px; height: 34px; object-fit: contain; pointer-events: none; }
+.di-label { font-size: 10px; font-weight: 700; color: var(--ink-soft); }
+
+.drag-ghost {
+  position: fixed;
+  z-index: 60;
+  transform: translate(-50%, -50%) scale(1.15);
+  pointer-events: none;
+  font-size: 42px;
+  filter: drop-shadow(0 6px 10px rgba(200, 120, 150, 0.45));
+}
+.drag-ghost img { width: 58px; height: 58px; object-fit: contain; }
+
+/* vùng thả sáng lên + Mít "nảy" khi kéo món tới gần */
+.stage.hot .halo {
+  transform: scale(1.08);
+  box-shadow: 0 0 26px 8px rgba(255, 150, 190, 0.55), inset 0 -10px 30px rgba(255, 170, 195, 0.25);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.stage.hot .hamster {
+  filter: drop-shadow(0 0 12px rgba(255, 120, 160, 0.85)) drop-shadow(0 12px 14px rgba(200, 120, 150, 0.28));
+}
+
+/* ---------- Stat cards (streak, hoa/tuần) ---------- */
+.stat-row { display: flex; gap: 10px; }
+.stat-card {
+  flex: 1;
+  text-align: center;
+  background: var(--cream);
+  border: 2px solid #ffe0ea;
+  border-radius: 16px;
+  padding: 10px 8px;
+  box-shadow: 0 6px 14px rgba(255, 150, 180, 0.14);
+}
+.stat-num {
+  font-family: 'Baloo 2', sans-serif;
+  font-weight: 800;
+  font-size: 22px;
+  color: var(--pink-deep);
+}
+.stat-label { font-size: 11.5px; font-weight: 700; color: var(--ink-soft); line-height: 1.2; }
+
 /* ---------- Bottom tab bar ---------- */
 .tabbar {
   display: grid;

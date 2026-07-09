@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+// Bộ hamster cũ — dùng làm fallback khi chưa có ảnh mit_* trong src/assets/mit/
 import coffee from './assets/hamsters/coffee.png';
 import love from './assets/hamsters/love.png';
 import food from './assets/hamsters/food.png';
@@ -7,35 +8,73 @@ import money from './assets/hamsters/money.png';
 import hello from './assets/hamsters/hello.png';
 import flower from './assets/hamsters/flower.png';
 
-// ---- Cấu hình hoạt động: mỗi nút đổi ảnh + thả một câu ngẫu nhiên ----
-const ACTIONS = [
+// ---- Ảnh Mít: nạp mọi ảnh có sẵn trong assets (mit_* và item_*) ----
+// Quét cả src/assets/hamsters/ và src/assets/mit/ để không phụ thuộc chỗ đặt file.
+const MIT_URLS = {
+  ...import.meta.glob('./assets/hamsters/*.png', { eager: true, query: '?url', import: 'default' }),
+  ...import.meta.glob('./assets/mit/*.png', { eager: true, query: '?url', import: 'default' }),
+};
+const MIT_IMAGES = {};
+for (const [path, url] of Object.entries(MIT_URLS)) {
+  const name = path.split('/').pop().replace(/\.png$/, '');
+  MIT_IMAGES[name] = url;
+}
+// Fallback ảnh mood/reaction về bộ hamster cũ khi chưa có ảnh mit_* thật.
+const FALLBACK_IMG = {
+  mit_happy: hello, mit_hello: hello, mit_sleepy: hello, mit_sleeping: hello,
+  mit_need_pet: hello, mit_petted: hello, mit_sad: hello,
+  mit_thirsty: hello, mit_drinking: hello,
+  mit_hungry: food, mit_starving: food, mit_eating: food,
+  mit_coffee: coffee, mit_love: love, mit_flower: flower, mit_money: money,
+};
+const mitImg = (name) => MIT_IMAGES[name] || FALLBACK_IMG[name] || hello;
+const itemImg = (name) => MIT_IMAGES[name] || null; // null → hiển thị emoji
+
+// ---- Hoạt động: món đồ kéo-thả + ảnh phản ứng + câu nói ----
+const ACTIVITIES = [
   {
-    key: 'coffee', label: 'Cho uống cà phê', emoji: '☕', img: coffee,
+    key: 'food', label: 'Cho ăn', emoji: '🍚', item: 'item_food', reaction: 'mit_eating',
+    lines: [
+      'Ăn cơm chưa cục cưng? Không được bỏ bữa nha 🍚',
+      'Snack cho Mít nè, đói là quạu đó nha 🍟',
+      'Ăn cho khỏe rồi thương anh nhiều nhiều 😋',
+    ],
+  },
+  {
+    key: 'water', label: 'Uống nước', emoji: '💧', item: 'item_water', reaction: 'mit_drinking',
+    lines: [
+      'Uống nước rồi nè, mát ghê 💧',
+      'Cảm ơn anh, Mít hết khát rồi 🥤',
+      'Nước ngon, anh cũng uống với Mít nha 💗',
+    ],
+  },
+  {
+    key: 'coffee', label: 'Cà phê', emoji: '☕', item: 'item_coffee', reaction: 'mit_coffee',
     lines: [
       'Cà phê nè anh ơi, tỉnh táo làm việc nha ☕',
-      'Uống cà phê rồi ôm em một cái nha 🥰',
+      'Uống cà phê rồi ôm Mít một cái nha 🥰',
       'Làm ít thôi cục cưng, mệt thì nghỉ 5 phút ☕',
     ],
   },
   {
-    key: 'love', label: 'Nói yêu', emoji: '💕', img: love,
+    key: 'love', label: 'Nói yêu', emoji: '💗', item: 'item_heart', reaction: 'mit_love',
     lines: [
       'Em thương anh nhiều lắm đó ❤️',
-      'Anh là cục cưng số một của em 🥺',
+      'Anh là cục cưng số một của Mít 🥺',
       'I love you cục cưng 💕',
-      'Có anh là ngày của em vui rồi 🫶',
+      'Có anh là ngày của Mít vui rồi 🫶',
     ],
   },
   {
-    key: 'food', label: 'Cho ăn', emoji: '🍟', img: food,
+    key: 'flower', label: 'Tặng hoa', emoji: '🌼', item: 'item_flower', reaction: 'mit_flower',
     lines: [
-      'Ăn cơm chưa cục cưng? Không được bỏ bữa nha 🍚',
-      'Snack cho anh nè, đói là quạu đó nha 🍟',
-      'Ăn cho khỏe rồi thương em nhiều nhiều 😋',
+      'Tặng anh nè, thương anh nhiều 🌼',
+      'Hoa cho người thương của Mít 💐',
+      'Đẹp trai của Mít nhận hoa nha 🌸',
     ],
   },
   {
-    key: 'money', label: 'Cho tiền', emoji: '💵', img: money,
+    key: 'money', label: 'Cho tiền', emoji: '💵', item: 'item_money', reaction: 'mit_money',
     lines: [
       'Tiền tiêu vặt cho cục cưng nè 💵',
       'Cầm lấy mua trà sữa uống nha 🧋',
@@ -43,26 +82,37 @@ const ACTIONS = [
     ],
   },
   {
-    key: 'hello', label: 'Hello', emoji: '👋', img: hello,
+    key: 'pet', label: 'Vuốt ve', emoji: '🫶', item: 'item_hand', reaction: 'mit_petted',
     lines: [
-      'Hi cục cưng ❤️',
-      'Anh ơi em nhớ anh nè 👋',
-      'Hôm nay của anh sao rồi? 🥰',
+      'Được vuốt ve thích ghê 🥰',
+      'Mít thương anh nhất 🫶',
+      'Xoa đầu Mít thêm cái nữa đi 💕',
     ],
   },
   {
-    key: 'flower', label: 'Tặng hoa', emoji: '🌼', img: flower,
+    key: 'sleep', label: 'Đi ngủ', emoji: '😴', item: 'item_sleep', reaction: 'mit_sleeping',
     lines: [
-      'Tặng anh nè, thương anh nhiều 🌼',
-      'Hoa cho người thương của em 💐',
-      'Đẹp trai của em nhận hoa nha 🌸',
+      'Mít đi ngủ đây, ngủ ngon nha anh 😴',
+      'Chúc anh mơ đẹp 🌙',
+      'Zzz… thương anh 💤',
     ],
   },
 ];
+const ACT_BY_KEY = Object.fromEntries(ACTIVITIES.map((a) => [a.key, a]));
+
+const HELLO_LINES = ['Hi cục cưng ❤️', 'Mít nhớ anh nè 👋', 'Hôm nay của anh sao rồi? 🥰'];
 
 const WATER_TIMES = [9, 11, 14, 16, 20]; // giờ nhắc uống nước
 const rand = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const todayKey = () => new Date().toISOString().slice(0, 10);
+
+// Ngày local (YYYY-MM-DD) cho care log — theo giờ máy để khớp mood/giờ.
+function localDayKey(d = new Date()) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+}
 
 // ---------------- Push notifications (OneSignal) ----------------
 const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent || '');
@@ -133,17 +183,76 @@ function useWater() {
   return { done, drink };
 }
 
-// -------- Care log (timestamp lần cuối mỗi hoạt động trong ngày) --------
-function useCareLog() {
-  const key = `mavis_care_${todayKey()}`;
-  const [log, setLog] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(key)) || {}; } catch { return {}; }
+// -------- Care state: đếm số lần mỗi hoạt động theo từng ngày --------
+function useCareDays() {
+  const [days, setDays] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('mavis_care_days')) || {}; } catch { return {}; }
   });
   useEffect(() => {
-    try { localStorage.setItem(key, JSON.stringify(log)); } catch {}
-  }, [key, log]);
-  const mark = (what) => setLog((l) => ({ ...l, [what]: Date.now() }));
-  return { log, mark };
+    try { localStorage.setItem('mavis_care_days', JSON.stringify(days)); } catch {}
+  }, [days]);
+  const mark = (key) => setDays((prev) => {
+    const k = localDayKey();
+    const day = { ...prev[k] };
+    day[key] = (day[key] || 0) + 1;
+    return { ...prev, [k]: day };
+  });
+  return { days, mark };
+}
+
+const countOn = (days, key, dk) => (days[dk] && days[dk][key]) || 0;
+const doneToday = (days, key) => countOn(days, key, localDayKey()) > 0;
+
+// Mood: chọn ảnh Mít theo trạng thái, ưu tiên từ trên xuống.
+function pickMood(days, hour) {
+  const today = localDayKey();
+  const yest = localDayKey(new Date(Date.now() - 864e5));
+  const night = hour >= 21 || hour < 5;
+  const ate = countOn(days, 'food', today) > 0;
+  const drank = countOn(days, 'water', today) > 0;
+  const petted = countOn(days, 'pet', today) > 0;
+  const slept = countOn(days, 'sleep', today) > 0;
+
+  if (slept && night) return 'mit_sleeping';
+  if (night) return 'mit_sleepy';
+  if (!ate && hour >= 14) {
+    const ateYest = countOn(days, 'food', yest) > 0;
+    return ateYest ? 'mit_hungry' : 'mit_starving';
+  }
+  if (!drank && hour >= 14) return 'mit_thirsty';
+  if (!petted && hour >= 18) return 'mit_need_pet';
+  if (!ate && !drank && !petted && hour >= 16) return 'mit_sad';
+  if (ate && drank && petted) return 'mit_happy';
+  return 'mit_happy';
+}
+
+// Streak: số ngày liên tiếp đủ 3 nhu cầu cốt lõi (ăn, nước, vuốt ve).
+function computeStreak(days) {
+  const complete = (dk) =>
+    countOn(days, 'food', dk) > 0 && countOn(days, 'water', dk) > 0 && countOn(days, 'pet', dk) > 0;
+  let d = new Date();
+  if (!complete(localDayKey(d))) d = new Date(d.getTime() - 864e5); // hôm nay chưa xong → tính tới hôm qua
+  let s = 0;
+  while (complete(localDayKey(d))) {
+    s++;
+    d = new Date(d.getTime() - 864e5);
+  }
+  return s;
+}
+
+// Số lần tặng hoa trong tuần này (tuần bắt đầu thứ Hai).
+function flowersThisWeek(days) {
+  const now = new Date();
+  const dow = (now.getDay() + 6) % 7; // Mon = 0
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - dow);
+  let n = 0;
+  for (const [dk, rec] of Object.entries(days)) {
+    const d = new Date(`${dk}T00:00:00`);
+    if (!Number.isNaN(d.getTime()) && d >= start) n += rec.flower || 0;
+  }
+  return n;
 }
 
 // ------------------------------- Hearts -------------------------------
@@ -175,20 +284,22 @@ const TABS = [
 
 // ---------------------------- Home tab ----------------------------
 function HomeTab({
-  current, message, wobble, hearts, doAction, petHead,
+  imgSrc, imgName, message, wobble, hearts, hot, stageRef, onPet,
+  onItemDown, onItemMove, onItemUp,
   showNotifCta, iosNeedsInstall, enableNotify,
 }) {
   return (
     <div className="tab-view home">
       <div className="stage-wrap">
-        <div className="stage">
+        <div ref={stageRef} className={`stage ${hot ? 'hot' : ''}`}>
           <div className="halo" />
           <img
-            src={current.img}
+            src={imgSrc}
             alt="Mít"
             className={`hamster ${wobble ? 'wobble' : ''}`}
-            onClick={petHead}
+            onClick={onPet}
             draggable={false}
+            key={imgName}
           />
           <div className="hearts">
             {hearts.map((h) => (
@@ -200,6 +311,29 @@ function HomeTab({
         </div>
 
         <div className="bubble" key={message}>{message}</div>
+
+        <div className="drag-hint">Kéo món đồ thả vào Mít nha 👇</div>
+
+        <div className="drag-tray" aria-label="Món đồ chăm Mít">
+          {ACTIVITIES.map((a) => {
+            const img = itemImg(a.item);
+            return (
+              <div
+                key={a.key}
+                className="drag-item"
+                onPointerDown={(e) => onItemDown(e, a)}
+                onPointerMove={onItemMove}
+                onPointerUp={onItemUp}
+                onPointerCancel={onItemUp}
+              >
+                {img
+                  ? <img className="di-img" src={img} alt="" draggable={false} />
+                  : <span className="di-emoji">{a.emoji}</span>}
+                <span className="di-label">{a.label}</span>
+              </div>
+            );
+          })}
+        </div>
 
         {showNotifCta && (
           iosNeedsInstall ? (
@@ -213,26 +347,24 @@ function HomeTab({
           )
         )}
       </div>
-
-      <nav className="actions">
-        {ACTIONS.map((a) => (
-          <button key={a.key} className="action" onClick={() => doAction(a)}>
-            <span className="a-emoji">{a.emoji}</span>
-            <span className="a-label">{a.label}</span>
-          </button>
-        ))}
-      </nav>
     </div>
   );
 }
 
 // ---------------------------- Care tab ----------------------------
-function CareTab({ weather, water, hour, dueWater, careLog }) {
+function CareTab({ weather, water, hour, dueWater, days, onWaterExtra }) {
   const checklist = [
-    { key: 'food', emoji: '🍚', label: 'Đã cho ăn', done: !!careLog.food },
-    { key: 'water', emoji: '💧', label: 'Đã uống nước', done: water.done.length > 0 },
-    { key: 'pet', emoji: '🫶', label: 'Đã vuốt ve', done: !!careLog.pet },
+    { key: 'food', emoji: '🍚', label: 'Đã cho ăn', done: doneToday(days, 'food') },
+    { key: 'water', emoji: '💧', label: 'Đã uống nước', done: doneToday(days, 'water') || water.done.length > 0 },
+    { key: 'pet', emoji: '🫶', label: 'Đã vuốt ve', done: doneToday(days, 'pet') },
+    { key: 'coffee', emoji: '☕', label: 'Đã cà phê', done: doneToday(days, 'coffee') },
+    { key: 'flower', emoji: '🌼', label: 'Đã tặng hoa', done: doneToday(days, 'flower') },
+    { key: 'sleep', emoji: '😴', label: 'Đã cho đi ngủ', done: doneToday(days, 'sleep') },
   ];
+  const streak = computeStreak(days);
+  const flowers = flowersThisWeek(days);
+
+  const drinkSlot = (h) => { water.drink(h); onWaterExtra(); };
 
   return (
     <div className="tab-view care">
@@ -243,10 +375,21 @@ function CareTab({ weather, water, hour, dueWater, careLog }) {
       </div>
 
       {dueWater.length > 0 && (
-        <button className="water-nudge" onClick={() => water.drink(dueWater[0])}>
+        <button className="water-nudge" onClick={() => drinkSlot(dueWater[0])}>
           💧 Đến giờ uống nước rồi cục cưng — bấm khi uống xong nha
         </button>
       )}
+
+      <div className="stat-row">
+        <div className="stat-card">
+          <div className="stat-num">🔥 {streak}</div>
+          <div className="stat-label">ngày liên tiếp đủ chăm</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-num">🌼 {flowers}</div>
+          <div className="stat-label">lần tặng hoa tuần này</div>
+        </div>
+      </div>
 
       <div className="care-section">
         <div className="care-title">Nhắc uống nước</div>
@@ -258,7 +401,7 @@ function CareTab({ weather, water, hour, dueWater, careLog }) {
               <button
                 key={h}
                 className={`drop ${drunk ? 'drunk' : ''} ${due ? 'due' : ''}`}
-                onClick={() => water.drink(h)}
+                onClick={() => drinkSlot(h)}
                 title={`${h}:00`}
               >
                 <span className="drop-ico">💧</span>
@@ -404,25 +547,31 @@ function Onboarding({ notifPerm, onEnableNotify, onClose }) {
 
 export default function App() {
   const [tab, setTab] = useState('home');
-  const [current, setCurrent] = useState(ACTIONS[4]); // mặc định: hello
-  const [message, setMessage] = useState('hi cục cưng ❤️');
-  const [count, setCount] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('mavis_counts')) || {}; } catch { return {}; }
-  });
+  const [message, setMessage] = useState(() => rand(HELLO_LINES));
+  const [reaction, setReaction] = useState('mit_hello'); // ảnh phản ứng tạm thời (null → theo mood)
   const [wobble, setWobble] = useState(false);
   const weather = useWeather();
   const water = useWater();
-  const care = useCareLog();
+  const care = useCareDays();
   const { hearts, burst } = useHearts();
   const wobbleTimer = useRef(null);
+  const reactionTimer = useRef(null);
   const [notifPerm, setNotifPerm] = useState(notifPermission);
   const [showOnboarding, setShowOnboarding] = useState(() => {
     try { return !localStorage.getItem('mavis_onboarded'); } catch { return false; }
   });
 
+  // Drag & drop
+  const stageRef = useRef(null);
+  const dragAct = useRef(null);
+  const [drag, setDrag] = useState(null); // { key, item, emoji, x, y }
+  const [hot, setHot] = useState(false);
+
+  // Chào khi mở app: hiện mit_hello ~2.5s rồi về mood.
   useEffect(() => {
-    try { localStorage.setItem('mavis_counts', JSON.stringify(count)); } catch {}
-  }, [count]);
+    const t = setTimeout(() => setReaction(null), 2500);
+    return () => clearTimeout(t);
+  }, []);
 
   const enableNotify = () => {
     if (!window.OneSignalDeferred) return;
@@ -447,28 +596,60 @@ export default function App() {
     [hour, water.done]
   );
 
-  const doAction = (action) => {
-    setCurrent(action);
-    setMessage(rand(action.lines));
-    setCount((c) => ({ ...c, [action.key]: (c[action.key] || 0) + 1 }));
-    care.mark(action.key);
+  // Kích hoạt một hoạt động: ghi nhận + hiện ảnh phản ứng ~2.5s + câu nói.
+  const triggerActivity = (act) => {
+    care.mark(act.key);
+    setMessage(rand(act.lines));
+    setReaction(act.reaction);
     setWobble(false);
     requestAnimationFrame(() => setWobble(true));
     clearTimeout(wobbleTimer.current);
     wobbleTimer.current = setTimeout(() => setWobble(false), 600);
-    if (action.key === 'love' || action.key === 'flower') burst(7);
+    clearTimeout(reactionTimer.current);
+    reactionTimer.current = setTimeout(() => setReaction(null), 2500);
+    if (act.key === 'love' || act.key === 'flower') burst(7);
     else burst(3);
   };
 
-  const petHead = () => {
-    setMessage('hi cục cưng ❤️');
-    care.mark('pet');
-    burst(5);
-    setWobble(false);
-    requestAnimationFrame(() => setWobble(true));
-    clearTimeout(wobbleTimer.current);
-    wobbleTimer.current = setTimeout(() => setWobble(false), 600);
+  const onPet = () => triggerActivity(ACT_BY_KEY.pet);
+
+  // ---- Drag & drop bằng pointer events (chạy cả chuột lẫn cảm ứng) ----
+  const overStage = (x, y) => {
+    const el = stageRef.current;
+    if (!el) return false;
+    const r = el.getBoundingClientRect();
+    const pad = 16;
+    return x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad;
   };
+
+  const onItemDown = (e, act) => {
+    e.preventDefault();
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
+    dragAct.current = act;
+    setDrag({ key: act.key, item: act.item, emoji: act.emoji, x: e.clientX, y: e.clientY });
+    setHot(overStage(e.clientX, e.clientY));
+  };
+  const onItemMove = (e) => {
+    if (!dragAct.current) return;
+    const x = e.clientX;
+    const y = e.clientY;
+    setDrag((d) => (d ? { ...d, x, y } : d));
+    setHot(overStage(x, y));
+  };
+  const onItemUp = (e) => {
+    const act = dragAct.current;
+    if (!act) return;
+    const over = overStage(e.clientX, e.clientY);
+    dragAct.current = null;
+    setDrag(null);
+    setHot(false);
+    if (over) triggerActivity(act);
+  };
+
+  const mood = pickMood(care.days, hour);
+  const imgName = reaction || mood;
+  const imgSrc = mitImg(imgName);
+  const ghostImg = drag ? itemImg(drag.item) : null;
 
   return (
     <div className="app">
@@ -478,12 +659,17 @@ export default function App() {
 
       {tab === 'home' && (
         <HomeTab
-          current={current}
+          imgSrc={imgSrc}
+          imgName={imgName}
           message={message}
           wobble={wobble}
           hearts={hearts}
-          doAction={doAction}
-          petHead={petHead}
+          hot={hot}
+          stageRef={stageRef}
+          onPet={onPet}
+          onItemDown={onItemDown}
+          onItemMove={onItemMove}
+          onItemUp={onItemUp}
           showNotifCta={showNotifCta}
           iosNeedsInstall={iosNeedsInstall}
           enableNotify={enableNotify}
@@ -496,7 +682,8 @@ export default function App() {
           water={water}
           hour={hour}
           dueWater={dueWater}
-          careLog={care.log}
+          days={care.days}
+          onWaterExtra={() => care.mark('water')}
         />
       )}
 
@@ -514,6 +701,14 @@ export default function App() {
           </button>
         ))}
       </nav>
+
+      {drag && (
+        <div className="drag-ghost" style={{ left: drag.x, top: drag.y }}>
+          {ghostImg
+            ? <img src={ghostImg} alt="" draggable={false} />
+            : <span>{drag.emoji}</span>}
+        </div>
+      )}
 
       {showOnboarding && (
         <Onboarding
