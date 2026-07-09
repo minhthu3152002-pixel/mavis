@@ -15,8 +15,8 @@ function weatherMessage({ code, tmax, pop }) {
     (code >= 95 && code <= 99);
   if (rainy) return 'Hôm nay có thể mưa đó cục cưng, nhớ mang áo mưa nha ☔';
   if (tmax >= 32) return 'Hôm nay nắng nóng á, nhớ uống nước với che nắng nha ☀️';
-  if (tmax <= 23) return 'Trời hơi lạnh nè, mặc áo ấm nha  🧥';
-  return 'Thời tiết hôm nay dễ chịu lémm 🌤️';
+  if (tmax <= 23) return 'Trời hơi lạnh nè, mặc áo ấm nha cục cưng 🧥';
+  return 'Thời tiết hôm nay dễ chịu, ngày đẹp cho cục cưng đó 🌤️';
 }
 
 // Gộp mọi khoảng trắng liên tiếp thành 1 space và trim đầu/cuối.
@@ -35,12 +35,12 @@ async function buildNotification(type) {
     const res = await fetch(HCMC_WEATHER);
     const data = await res.json();
     const daily = data.daily || {};
-    const heading = weatherMessage({
+    const body = weatherMessage({
       code: (daily.weather_code || [])[0],
       tmax: (daily.temperature_2m_max || [])[0],
       pop: (daily.precipitation_probability_max || [])[0] ?? 0,
     });
-    return { heading, body: 'Chúc cục cưng một ngày vui 🌤️' };
+    return { heading: 'Weather 🌤️', body };
   }
   return null;
 }
