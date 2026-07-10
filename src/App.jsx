@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { track } from './lib/track';
+import { useAuth } from './lib/useAuth';
 
 // Bộ hamster cũ — dùng làm fallback khi thiếu ảnh mit_*.
 import coffee from './assets/hamsters/coffee.png';
@@ -409,7 +411,7 @@ function HomeTab({
 }
 
 // ---------------------------- Care tab ----------------------------
-function CareTab({ weather, water, hour, dueWater, days, onWaterExtra, petName, onRename }) {
+function CareTab({ weather, water, hour, dueWater, days, onWaterExtra, petName, onRename, onSignOut }) {
   const [nameDraft, setNameDraft] = useState(petName);
   const checklist = [
     { key: 'food', emoji: '🍚', label: 'Đã cho ăn', done: doneToday(days, 'food') },
@@ -500,6 +502,8 @@ function CareTab({ weather, water, hour, dueWater, days, onWaterExtra, petName, 
           ))}
         </ul>
       </div>
+
+      <button className="signout-btn" onClick={onSignOut}>Đăng xuất</button>
     </div>
   );
 }
@@ -649,6 +653,7 @@ function Onboarding({ petName, onSetName, notifPerm, onEnableNotify, onClose }) 
 }
 
 export default function App() {
+  const { profile, signOut } = useAuth();
   const [tab, setTab] = useState('home');
   const [petName, setPetName] = usePetName();
   const [message, setMessage] = useState(() => rand(HELLO_LINES)); // câu after/hello (template)
@@ -683,11 +688,13 @@ export default function App() {
     window.OneSignalDeferred.push(async (OneSignal) => {
       await OneSignal.Notifications.requestPermission();
       setNotifPerm(notifPermission());
+      track('notify_enabled', {}, petName);
     });
   };
 
   const closeOnboarding = () => {
     try { localStorage.setItem('mavis_onboarded', '1'); } catch {}
+    track('onboarding_done', {}, petName);
     setShowOnboarding(false);
   };
   const openOnboarding = () => setShowOnboarding(true);
@@ -710,6 +717,7 @@ export default function App() {
 
   const triggerActivity = (act) => {
     care.mark(act.key);
+    track('care_action', { activity: act.key }, petName);
     setMessage(rand(act.after));
     setReaction(rand(reactionVariants(act.reaction)));
     setWobble(false);
@@ -807,6 +815,7 @@ export default function App() {
           onWaterExtra={() => care.mark('water')}
           petName={petName}
           onRename={setPetName}
+          onSignOut={signOut}
         />
       )}
 
@@ -817,7 +826,7 @@ export default function App() {
           <button
             key={t.key}
             className={`tab-btn ${tab === t.key ? 'active' : ''}`}
-            onClick={() => setTab(t.key)}
+            onClick={() => { setTab(t.key); track('tab_view', { tab: t.key }, petName); }}
           >
             <span className="t-emoji">{t.icon}</span>
             <span className="t-label">{t.key === 'home' ? petName : t.label}</span>
