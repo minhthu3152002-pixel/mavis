@@ -571,3 +571,43 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .hamster, .drop.due, .bubble, .weather.on, .sheet, .sheet-overlay { animation: none !important; }
 }
+
+/* ---------- Auth (đăng nhập / đặt tên) ---------- */
+.auth-screen {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: radial-gradient(circle at 50% 40%, var(--yellow-soft) 0%, #fff 78%);
+}
+.auth-card {
+  width: 100%;
+  max-width: 360px;
+  background: #fff;
+  border-radius: var(--radius);
+  box-shadow: var(--card-shadow);
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+.auth-card .sheet-input,
+.auth-card .btn-pill { width: 100%; }
+.auth-card .btn-pill:disabled { opacity: 0.5; }
+
+.signout-btn {
+  align-self: center;
+  margin-top: 4px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--ink-2);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.signout-btn:active { transform: scale(0.96); }

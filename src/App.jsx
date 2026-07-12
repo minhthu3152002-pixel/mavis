@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { track } from './lib/track';
+import { useAuth } from './lib/useAuth';
 
 // Bộ hamster cũ — dùng làm fallback khi thiếu ảnh mit_*.
 import coffee from './assets/hamsters/coffee.png';
@@ -25,9 +27,17 @@ const FALLBACK_IMG = {
   mit_hungry: food, mit_starving: food, mit_eating: food,
   mit_coffee: coffee, mit_love: love, mit_flower: flower, mit_money: money,
   mit_welcome: hello, mit_install: hello, mit_notify: hello, mit_thanks: hello, mit_guide: hello,
+  mit_matcha: coffee, mit_gym: hello, mit_sport: hello, mit_scared: hello, mit_wake: hello,
 };
 const mitImg = (name) => MIT_IMAGES[name] || FALLBACK_IMG[name] || hello;
 const itemImg = (name) => MIT_IMAGES[name] || null;
+
+function reactionVariants(base) {
+  const list = Object.keys(MIT_IMAGES).filter(
+    (n) => n === base || n.startsWith(base + '_')
+  );
+  return list.length ? list : [base];
+}
 
 // Thay {name} bằng tên bé cưng.
 const fill = (s, name) => (s || '').replaceAll('{name}', name);
@@ -76,6 +86,24 @@ const ACTIVITIES = [
     key: 'sleep', label: 'Đi ngủ', emoji: '😴', item: 'item_sleep', reaction: 'mit_sleeping',
     before: ['{name} buồn ngủ rồi anh ơi 😴', 'Khuya rồi, ru {name} ngủ nha 🌙'],
     after: ['Ngủ ngon nha, mai gặp anh 😴🩷', '{name} ôm gối ngủ đây, mơ thấy anh nè 💤'],
+  },
+  {
+    key: 'matcha', label: 'Matcha', emoji: '🍵', item: 'item_matcha', reaction: 'mit_matcha',
+    after: ['Matcha thơm béo, {name} ghiền luôn 🍵', 'Được cho nhiều matcha, {name} sướng rơn 💚', 'Ly matcha mát lành, cảm ơn cục cưng 🍵'],
+  },
+  {
+    key: 'sport', label: 'Thể thao', emoji: '⚽', item: 'item_sport', reaction: 'mit_sport',
+    before: ['{name} muốn ra sân quẫy tí 🎾'],
+    after: ['Chơi thể thao đã ghê anh ơi 🎾', '{name} vận động khỏe người luôn 🏃'],
+  },
+  {
+    key: 'gym', label: 'Tập gym', emoji: '🏋️', item: 'item_gym', reaction: 'mit_gym',
+    before: ['{name} muốn tập gym cho khỏe nè 💪'],
+    after: ['Tập xong lên cơ, {name} khỏe re 💪', 'Đổ mồ hôi tí mà vui ghê, cảm ơn anh 🥵🩷'],
+  },
+  {
+    key: 'scare', label: 'Hù ma', emoji: '👻', reaction: 'mit_scared',
+    after: ['Á á có ma!! {name} sợ muốn xỉu 😱', 'Hù {name} chi zậy anh, tim đập thình thịch 👻', '{name} sợ ma lắm nha, ôm cái đi 🥺'],
   },
 ];
 const ACT_BY_KEY = Object.fromEntries(ACTIVITIES.map((a) => [a.key, a]));
@@ -219,6 +247,7 @@ function pickMood(days, hour) {
 
   if (slept && night) return 'mit_sleeping';
   if (night) return 'mit_sleepy';
+  if (hour >= 5 && hour < 9 && !ate && !drank) return 'mit_wake';
   if (!ate && hour >= 14) {
     const ateYest = countOn(days, 'food', yest) > 0;
     return ateYest ? 'mit_hungry' : 'mit_starving';
@@ -382,7 +411,7 @@ function HomeTab({
 }
 
 // ---------------------------- Care tab ----------------------------
-function CareTab({ weather, water, hour, dueWater, days, onWaterExtra, petName, onRename }) {
+function CareTab({ weather, water, hour, dueWater, days, onWaterExtra, petName, onRename, onSignOut }) {
   const [nameDraft, setNameDraft] = useState(petName);
   const checklist = [
     { key: 'food', emoji: '🍚', label: 'Đã cho ăn', done: doneToday(days, 'food') },
@@ -391,6 +420,9 @@ function CareTab({ weather, water, hour, dueWater, days, onWaterExtra, petName, 
     { key: 'coffee', emoji: '☕', label: 'Đã cà phê', done: doneToday(days, 'coffee') },
     { key: 'flower', emoji: '🌼', label: 'Đã tặng hoa', done: doneToday(days, 'flower') },
     { key: 'sleep', emoji: '😴', label: 'Đã cho đi ngủ', done: doneToday(days, 'sleep') },
+    { key: 'matcha', emoji: '🍵', label: 'Đã uống matcha', done: doneToday(days, 'matcha') },
+    { key: 'gym', emoji: '🏋️', label: 'Đã tập gym', done: doneToday(days, 'gym') },
+    { key: 'sport', emoji: '⚽', label: 'Đã chơi thể thao', done: doneToday(days, 'sport') },
   ];
   const streak = computeStreak(days);
   const flowers = flowersThisWeek(days);
@@ -470,6 +502,8 @@ function CareTab({ weather, water, hour, dueWater, days, onWaterExtra, petName, 
           ))}
         </ul>
       </div>
+
+      <button className="signout-btn" onClick={onSignOut}>Đăng xuất</button>
     </div>
   );
 }
@@ -619,11 +653,13 @@ function Onboarding({ petName, onSetName, notifPerm, onEnableNotify, onClose }) 
 }
 
 export default function App() {
+  const { profile, signOut } = useAuth();
   const [tab, setTab] = useState('home');
   const [petName, setPetName] = usePetName();
   const [message, setMessage] = useState(() => rand(HELLO_LINES)); // câu after/hello (template)
   const [idleMsg, setIdleMsg] = useState(() => rand(HELLO_LINES)); // câu theo mood lúc rảnh
   const [reaction, setReaction] = useState('mit_hello');
+  const [moodImg, setMoodImg] = useState(null);
   const [wobble, setWobble] = useState(false);
   const weather = useWeather();
   const water = useWater();
@@ -652,11 +688,13 @@ export default function App() {
     window.OneSignalDeferred.push(async (OneSignal) => {
       await OneSignal.Notifications.requestPermission();
       setNotifPerm(notifPermission());
+      track('notify_enabled', {}, petName);
     });
   };
 
   const closeOnboarding = () => {
     try { localStorage.setItem('mavis_onboarded', '1'); } catch {}
+    track('onboarding_done', {}, petName);
     setShowOnboarding(false);
   };
   const openOnboarding = () => setShowOnboarding(true);
@@ -674,12 +712,14 @@ export default function App() {
   // Cập nhật câu lúc rảnh khi mood đổi.
   useEffect(() => {
     setIdleMsg(rand(moodLines(mood)));
+    setMoodImg(rand(reactionVariants(mood)));
   }, [mood]);
 
   const triggerActivity = (act) => {
     care.mark(act.key);
+    track('care_action', { activity: act.key }, petName);
     setMessage(rand(act.after));
-    setReaction(act.reaction);
+    setReaction(rand(reactionVariants(act.reaction)));
     setWobble(false);
     requestAnimationFrame(() => setWobble(true));
     clearTimeout(wobbleTimer.current);
@@ -724,7 +764,7 @@ export default function App() {
     if (over) triggerActivity(act);
   };
 
-  const imgName = reaction || mood;
+  const imgName = reaction || moodImg || mood;
   const imgSrc = mitImg(imgName);
   const ghostImg = drag ? itemImg(drag.item) : null;
   const bubbleText = fill(reaction ? message : idleMsg, petName);
@@ -775,6 +815,7 @@ export default function App() {
           onWaterExtra={() => care.mark('water')}
           petName={petName}
           onRename={setPetName}
+          onSignOut={signOut}
         />
       )}
 
@@ -785,7 +826,7 @@ export default function App() {
           <button
             key={t.key}
             className={`tab-btn ${tab === t.key ? 'active' : ''}`}
-            onClick={() => setTab(t.key)}
+            onClick={() => { setTab(t.key); track('tab_view', { tab: t.key }, petName); }}
           >
             <span className="t-emoji">{t.icon}</span>
             <span className="t-label">{t.key === 'home' ? petName : t.label}</span>
