@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
+import { track } from './track'
 
 export function useAuth() {
   const [session, setSession] = useState(null)
@@ -14,9 +15,17 @@ export function useAuth() {
       setSession(data.session)
       setReady(true)
     })
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s)
       setReady(true)
+      // Ghi 'login' một lần cho mỗi phiên trình duyệt (2 instance hook nên cần guard).
+      try {
+        if (event === 'SIGNED_IN' && !sessionStorage.getItem('mavis_login_tracked')) {
+          sessionStorage.setItem('mavis_login_tracked', '1')
+          track('login', {}, '')
+        }
+        if (event === 'SIGNED_OUT') sessionStorage.removeItem('mavis_login_tracked')
+      } catch { /* bỏ qua nếu sessionStorage không dùng được */ }
     })
     return () => subscription.unsubscribe()
   }, [])
