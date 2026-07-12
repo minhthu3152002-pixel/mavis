@@ -669,3 +669,120 @@ body {
   cursor: pointer;
 }
 .login-banner-x:active { transform: scale(0.92); }
+
+/* ===== Giai đoạn 2: thanh level + popup chỉ số + khoá hoạt động ===== */
+/* Thanh level ngang trên cùng trang chủ */
+.levelbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 340px;
+  margin: 0 auto 4px;
+  padding: 8px 12px;
+  border: 1px solid rgba(245, 166, 35, 0.25);
+  border-radius: 999px;
+  background: var(--yellow-soft);
+  cursor: pointer;
+  font: inherit;
+}
+.levelbar:active { transform: scale(0.985); }
+.levelbar-lv {
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--yellow-deep);
+}
+.levelbar-track {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+.levelbar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--yellow);
+  transition: width 0.35s ease;
+}
+.levelbar-coins {
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* Toast nhỏ khi chạm hoạt động bị khoá */
+.game-toast {
+  margin-top: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(28, 28, 30, 0.88);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  animation: fadeIn 0.15s ease;
+}
+
+/* Hoạt động bị khoá trong khay */
+.drag-item.locked {
+  position: relative;
+  cursor: not-allowed;
+  opacity: 0.55;
+  filter: grayscale(0.6);
+}
+.drag-item.locked:active { transform: none; }
+.di-lock {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 13px;
+  line-height: 1;
+}
+
+/* Popup chỉ số */
+.stats-sheet-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0 4px 8px;
+}
+.stats-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.stats-level {
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--yellow-deep);
+}
+.stats-coins {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.stat-block { display: flex; flex-direction: column; gap: 6px; }
+.stat-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.stat-name { font-size: 14px; font-weight: 700; color: var(--ink); }
+.stat-val { font-size: 13px; font-weight: 700; color: var(--ink-2); }
+.stat-bar {
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+.stat-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--yellow);
+  transition: width 0.35s ease;
+}
+.stat-hint { font-size: 11.5px; font-weight: 500; color: var(--ink-2); line-height: 1.4; }

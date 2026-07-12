@@ -3,6 +3,7 @@ import { track } from './lib/track';
 import { useAuth } from './lib/useAuth';
 import { buildState, fetchPetState, savePetState } from './lib/cloud';
 import { useGameState } from './game/useGameState';
+import { levelProgress, requiredStreakFor, isActivityUnlocked } from './game/config';
 
 // Bộ hamster cũ — dùng làm fallback khi thiếu ảnh mit_*.
 import coffee from './assets/hamsters/coffee.png';
@@ -342,9 +343,36 @@ function HomeTab({
   rings, dragHint,
   onItemDown, onItemMove, onItemUp,
   showNotifCta, iosNeedsInstall, enableNotify,
+  level, coins, levelPct, streak, onOpenStats,
 }) {
+  const [toast, setToast] = useState('');
+  const toastTimer = useRef(null);
+  const showToast = (msg) => {
+    setToast(msg);
+    clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(''), 2000);
+  };
+
+  // Thanh level trên cùng — bọc phòng lỗi, lỗi thì ẩn (app vẫn chạy).
+  let levelBar = null;
+  try {
+    if (typeof level === 'number') {
+      const pct = Math.max(0, Math.min(100, Number(levelPct) || 0));
+      levelBar = (
+        <button className="levelbar" onClick={onOpenStats} aria-label="Xem chỉ số">
+          <span className="levelbar-lv">Lv {level}</span>
+          <span className="levelbar-track">
+            <span className="levelbar-fill" style={{ width: `${pct}%` }} />
+          </span>
+          <span className="levelbar-coins">🪙 {coins ?? 0}</span>
+        </button>
+      );
+    }
+  } catch { levelBar = null; }
+
   return (
     <div className="tab-view home">
+      {levelBar}
       <div className="stage-wrap">
         <div className="bubble" key={bubbleText}>{bubbleText}</div>
 
@@ -378,23 +406,30 @@ function HomeTab({
         <div className="drag-tray" aria-label="Món đồ chăm Mít">
           {ACTIVITIES.map((a) => {
             const img = itemImg(a.item);
+            const need = requiredStreakFor(a.key);
+            const locked = need > 0 && !isActivityUnlocked(a.key, streak);
             return (
               <div
                 key={a.key}
-                className="drag-item"
-                onPointerDown={(e) => onItemDown(e, a)}
-                onPointerMove={onItemMove}
-                onPointerUp={onItemUp}
-                onPointerCancel={onItemUp}
+                className={`drag-item ${locked ? 'locked' : ''}`}
+                onPointerDown={locked
+                  ? (e) => { e.preventDefault(); showToast(`Giữ chuỗi ${need} ngày để mở 🔒`); }
+                  : (e) => onItemDown(e, a)}
+                onPointerMove={locked ? undefined : onItemMove}
+                onPointerUp={locked ? undefined : onItemUp}
+                onPointerCancel={locked ? undefined : onItemUp}
               >
                 {img
                   ? <img className="di-img" src={img} alt="" draggable={false} />
                   : <span className="di-emoji">{a.emoji}</span>}
                 <span className="di-label">{a.label}</span>
+                {locked && <span className="di-lock">🔒</span>}
               </div>
             );
           })}
         </div>
+
+        {toast && <div className="game-toast">{toast}</div>}
 
         {showNotifCta && (
           iosNeedsInstall ? (
@@ -407,6 +442,43 @@ function HomeTab({
             </button>
           )
         )}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------- Popup chỉ số (Giai đoạn 2) ----------------------------
+const STAT_BARS = [
+  { key: 'iq', emoji: '🧠', label: 'IQ', hint: 'Tăng khi: học bài, làm việc, chơi minigame trí tuệ' },
+  { key: 'eq', emoji: '💗', label: 'EQ (Tình cảm)', hint: 'Tăng khi: cho ăn/uống, tặng hoa, vuốt ve, nói yêu, shopping, mặc đồ đẹp' },
+  { key: 'physical', emoji: '💪', label: 'Thể chất', hint: 'Tăng khi: gym, chạy bộ, đạp xe, thể thao' },
+];
+
+function StatsSheet({ level, stats, coins, onClose }) {
+  return (
+    <div className="sheet-overlay" role="dialog" aria-modal="true" onClick={onClose}>
+      <div className="sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="grabber" />
+        <div className="stats-sheet-body">
+          <div className="stats-head">
+            <span className="stats-level">Lv {level}</span>
+            <span className="stats-coins">🪙 {coins ?? 0}</span>
+          </div>
+          {STAT_BARS.map((b) => {
+            const v = Math.max(0, Math.min(100, (stats && stats[b.key]) || 0));
+            return (
+              <div key={b.key} className="stat-block">
+                <div className="stat-head">
+                  <span className="stat-name">{b.emoji} {b.label}</span>
+                  <span className="stat-val">{v}/100</span>
+                </div>
+                <div className="stat-bar"><div className="stat-bar-fill" style={{ width: `${v}%` }} /></div>
+                <div className="stat-hint">{b.hint}</div>
+              </div>
+            );
+          })}
+          <button className="btn-pill btn-primary" onClick={onClose}>Đóng</button>
+        </div>
       </div>
     </div>
   );
@@ -679,6 +751,7 @@ export default function App() {
   const [bannerDismissed, setBannerDismissed] = useState(() => {
     try { return !!localStorage.getItem('mavis_login_banner_dismissed'); } catch { return false; }
   });
+  const [showStats, setShowStats] = useState(false);
   const hydratedRef = useRef(false);
   const cloudSaveTimer = useRef(null);
 
@@ -861,6 +934,11 @@ export default function App() {
           showNotifCta={showNotifCta}
           iosNeedsInstall={iosNeedsInstall}
           enableNotify={enableNotify}
+          level={game.level}
+          coins={game.coins}
+          levelPct={levelProgress(game.stats)}
+          streak={streak}
+          onOpenStats={() => setShowStats(true)}
         />
       )}
 
@@ -910,6 +988,15 @@ export default function App() {
           notifPerm={notifPerm}
           onEnableNotify={enableNotify}
           onClose={closeOnboarding}
+        />
+      )}
+
+      {showStats && (
+        <StatsSheet
+          level={game.level}
+          stats={game.stats}
+          coins={game.coins}
+          onClose={() => setShowStats(false)}
         />
       )}
     </div>

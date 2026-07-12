@@ -31,3 +31,34 @@ export function computeLevel(stats) {
   const physical = stats?.physical || 0;
   return clamp(Math.floor(((iq + eq + physical) / 3) / 2), 1, LEVEL_MAX);
 }
+
+// % tiến độ tới level kế tiếp (0..100). progress = (avg % 2) / 2 * 100.
+export function levelProgress(stats) {
+  const iq = stats?.iq || 0;
+  const eq = stats?.eq || 0;
+  const physical = stats?.physical || 0;
+  const avg = (iq + eq + physical) / 3;
+  return clamp((avg % 2) / 2 * 100, 0, 100);
+}
+
+// ===== Giai đoạn 2: mở khoá hoạt động theo chuỗi (streak) =====
+// Mốc chuỗi -> danh sách key hoạt động được mở. Key khớp ACTIVITIES (chỉnh sau).
+export const STREAK_UNLOCKS = {
+  3: ['run'],
+  5: ['coffee', 'matcha'],
+  7: ['flower', 'study'],
+};
+
+// Mốc chuỗi cần để mở 1 hoạt động (0 = luôn mở, tầng cơ bản).
+export function requiredStreakFor(key) {
+  try {
+    for (const [days, keys] of Object.entries(STREAK_UNLOCKS)) {
+      if (keys.includes(key)) return Number(days);
+    }
+  } catch { /* lỗi thì coi như luôn mở */ }
+  return 0;
+}
+
+export function isActivityUnlocked(key, streak) {
+  return (streak || 0) >= requiredStreakFor(key);
+}
