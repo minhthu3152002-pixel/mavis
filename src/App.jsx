@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { track } from './lib/track';
 import { useAuth } from './lib/useAuth';
+import { buildState, fetchPetState, savePetState } from './lib/cloud';
 
 // Bộ hamster cũ — dùng làm fallback khi thiếu ảnh mit_*.
 import coffee from './assets/hamsters/coffee.png';
@@ -218,7 +219,7 @@ function useCareDays() {
     day[key] = (day[key] || 0) + 1;
     return { ...prev, [k]: day };
   });
-  return { days, mark };
+  return { days, mark, setDays };
 }
 
 // -------- Tên bé cưng (localStorage, mặc định "Mít") --------
@@ -411,7 +412,7 @@ function HomeTab({
 }
 
 // ---------------------------- Care tab ----------------------------
-function CareTab({ weather, water, hour, dueWater, days, onWaterExtra, petName, onRename, onSignOut }) {
+function CareTab({ weather, water, hour, dueWater, days, onWaterExtra, petName, onRename, isMember, onSignIn, onSignOut }) {
   const [nameDraft, setNameDraft] = useState(petName);
   const checklist = [
     { key: 'food', emoji: '🍚', label: 'Đã cho ăn', done: doneToday(days, 'food') },
@@ -503,7 +504,9 @@ function CareTab({ weather, water, hour, dueWater, days, onWaterExtra, petName, 
         </ul>
       </div>
 
-      <button className="signout-btn" onClick={onSignOut}>Đăng xuất</button>
+      {isMember
+        ? <button className="signout-btn" onClick={onSignOut}>Đăng xuất</button>
+        : <button className="signin-btn" onClick={onSignIn}>Đăng nhập bằng Google 🩷</button>}
     </div>
   );
 }
@@ -653,7 +656,7 @@ function Onboarding({ petName, onSetName, notifPerm, onEnableNotify, onClose }) 
 }
 
 export default function App() {
-  const { profile, signOut } = useAuth();
+  const { user, signInWithGoogle, signOut } = useAuth();
   const [tab, setTab] = useState('home');
   const [petName, setPetName] = usePetName();
   const [message, setMessage] = useState(() => rand(HELLO_LINES)); // câu after/hello (template)
@@ -671,6 +674,11 @@ export default function App() {
   const [showOnboarding, setShowOnboarding] = useState(() => {
     try { return !localStorage.getItem('mavis_onboarded'); } catch { return false; }
   });
+  const [bannerDismissed, setBannerDismissed] = useState(() => {
+    try { return !!localStorage.getItem('mavis_login_banner_dismissed'); } catch { return false; }
+  });
+  const hydratedRef = useRef(false);
+  const cloudSaveTimer = useRef(null);
 
   // Drag & drop
   const stageRef = useRef(null);
@@ -682,6 +690,38 @@ export default function App() {
     const t = setTimeout(() => setReaction(null), 2500);
     return () => clearTimeout(t);
   }, []);
+
+  // MEMBER: khi đăng nhập, đồng bộ tiến độ với cloud (pet_state).
+  useEffect(() => {
+    if (!user) { hydratedRef.current = false; return; }
+    let active = true;
+    (async () => {
+      const remote = await fetchPetState(user.id);
+      if (!active) return;
+      if (!remote) {
+        // Cloud chưa có -> đẩy tiến độ guest hiện tại lên (chuyển sang tài khoản).
+        await savePetState(user.id, buildState(care.days, petName));
+      } else if (remote.state) {
+        // Cloud đã có -> ưu tiên bản cloud.
+        if (remote.state.care_days) care.setDays(remote.state.care_days);
+        if (remote.state.pet_name) setPetName(remote.state.pet_name);
+      }
+      hydratedRef.current = true;
+    })();
+    return () => { active = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  // MEMBER: mỗi khi tiến độ đổi thì lưu lên cloud (debounce ~1.5s).
+  useEffect(() => {
+    if (!user || !hydratedRef.current) return;
+    clearTimeout(cloudSaveTimer.current);
+    cloudSaveTimer.current = setTimeout(() => {
+      savePetState(user.id, buildState(care.days, petName));
+    }, 1500);
+    return () => clearTimeout(cloudSaveTimer.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, care.days, petName]);
 
   const enableNotify = () => {
     if (!window.OneSignalDeferred) return;
@@ -698,6 +738,12 @@ export default function App() {
     setShowOnboarding(false);
   };
   const openOnboarding = () => setShowOnboarding(true);
+
+  const dismissBanner = () => {
+    try { localStorage.setItem('mavis_login_banner_dismissed', '1'); } catch {}
+    setBannerDismissed(true);
+  };
+  const showLoginBanner = !user && !bannerDismissed;
 
   const showNotifCta = notifPerm !== 'granted';
   const iosNeedsInstall = showNotifCta && isIOS() && !isStandalone();
@@ -784,6 +830,16 @@ export default function App() {
         <div className="streak-pill">🔥 {streak}</div>
       </header>
 
+      {showLoginBanner && (
+        <div className="login-banner">
+          <span className="login-banner-text">
+            Đăng nhập Google để lưu chuỗi &amp; level vĩnh viễn, khỏi lo mất khi đổi máy 🩷
+          </span>
+          <button className="login-banner-btn" onClick={signInWithGoogle}>Đăng nhập</button>
+          <button className="login-banner-x" onClick={dismissBanner} aria-label="Đóng nhắc nhở">×</button>
+        </div>
+      )}
+
       {tab === 'home' && (
         <HomeTab
           imgSrc={imgSrc}
@@ -815,6 +871,8 @@ export default function App() {
           onWaterExtra={() => care.mark('water')}
           petName={petName}
           onRename={setPetName}
+          isMember={!!user}
+          onSignIn={signInWithGoogle}
           onSignOut={signOut}
         />
       )}

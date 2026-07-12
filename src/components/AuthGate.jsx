@@ -1,11 +1,22 @@
 import { useState } from 'react'
 import { useAuth } from '../lib/useAuth'
+import { track } from '../lib/track'
+
+const getGuestName = () => {
+  try { return localStorage.getItem('mavis_username') || '' } catch { return '' }
+}
 
 export default function AuthGate({ children }) {
-  const { user, profile, loading, signInWithGoogle, saveUsername } = useAuth()
+  const { user, profile, loading, saveUsername } = useAuth()
+  const [guestName, setGuestName] = useState(getGuestName)
   const [name, setName] = useState('')
+  const [saving, setSaving] = useState(false)
 
-  if (loading) {
+  // Member ưu tiên username từ profile; guest dùng username localStorage.
+  const username = profile?.username || guestName
+
+  // Chỉ chờ khi đang xác định member VÀ chưa có tên guest sẵn (tránh chặn guest).
+  if (loading && !guestName) {
     return (
       <div className="auth-screen">
         <p className="sheet-text muted">Đang tải...</p>
@@ -13,23 +24,24 @@ export default function AuthGate({ children }) {
     )
   }
 
-  // Chưa đăng nhập -> màn đăng nhập Google.
-  if (!user) {
-    return (
-      <div className="auth-screen">
-        <div className="auth-card">
-          <h1 className="sheet-title">Mavis nè 🐹</h1>
-          <p className="sheet-text">Đăng nhập để chăm bé cưng nha 🩷</p>
-          <button className="btn-pill btn-primary" onClick={signInWithGoogle}>
-            Đăng nhập bằng Google
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  // Đã đăng nhập nhưng chưa có username -> màn đặt tên.
-  if (!profile || !profile.username) {
+  // Chưa có username -> màn đặt tên (KHÔNG bắt đăng nhập).
+  if (!username) {
+    const onSave = async () => {
+      const v = name.trim()
+      if (!v || saving) return
+      setSaving(true)
+      try {
+        if (user) {
+          await saveUsername(v) // member -> lưu vào profile Supabase
+        } else {
+          try { localStorage.setItem('mavis_username', v) } catch {}
+          setGuestName(v)
+          track('guest_start', {}, '')
+        }
+      } finally {
+        setSaving(false)
+      }
+    }
     return (
       <div className="auth-screen">
         <div className="auth-card">
@@ -41,11 +53,12 @@ export default function AuthGate({ children }) {
             placeholder="Tên của bạn"
             maxLength={20}
             onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') onSave() }}
           />
           <button
             className="btn-pill btn-primary"
-            disabled={!name.trim()}
-            onClick={() => saveUsername(name)}
+            disabled={!name.trim() || saving}
+            onClick={onSave}
           >
             Lưu
           </button>

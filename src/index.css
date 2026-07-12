@@ -611,3 +611,61 @@ body {
   cursor: pointer;
 }
 .signout-btn:active { transform: scale(0.96); }
+
+.signin-btn {
+  align-self: center;
+  margin-top: 4px;
+  padding: 12px 22px;
+  border: none;
+  border-radius: 999px;
+  background: var(--yellow);
+  color: #3A2C00;
+  font-size: 15px;
+  font-weight: 700;
+  box-shadow: 0 8px 20px rgba(245, 166, 35, 0.35);
+  cursor: pointer;
+}
+.signin-btn:active { transform: scale(0.96); }
+
+/* ---------- Banner nhắc đăng nhập (guest) ---------- */
+.login-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--yellow-soft);
+  border: 1px solid rgba(245, 166, 35, 0.25);
+}
+.login-banner-text {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--ink);
+}
+.login-banner-btn {
+  flex: 0 0 auto;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 999px;
+  background: var(--yellow);
+  color: #3A2C00;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.login-banner-btn:active { transform: scale(0.96); }
+.login-banner-x {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--ink-2);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+.login-banner-x:active { transform: scale(0.92); }
