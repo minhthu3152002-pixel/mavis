@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { track } from './lib/track';
 import { useAuth } from './lib/useAuth';
 import { buildState, fetchPetState, savePetState } from './lib/cloud';
+import { useGameState } from './game/useGameState';
 
 // Bộ hamster cũ — dùng làm fallback khi thiếu ảnh mit_*.
 import coffee from './assets/hamsters/coffee.png';
@@ -667,6 +668,7 @@ export default function App() {
   const weather = useWeather();
   const water = useWater();
   const care = useCareDays();
+  const game = useGameState();
   const { hearts, burst } = useHearts();
   const wobbleTimer = useRef(null);
   const reactionTimer = useRef(null);
@@ -774,6 +776,7 @@ export default function App() {
     reactionTimer.current = setTimeout(() => setReaction(null), 2500);
     if (act.key === 'love' || act.key === 'flower') burst(7);
     else burst(3);
+    game.addPoints(act.key);
   };
 
   const onPet = () => triggerActivity(ACT_BY_KEY.pet);
