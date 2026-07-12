@@ -720,31 +720,31 @@ body {
   gap: 10px;
   width: 100%;
   max-width: 340px;
-  margin: 0 auto 6px;
+  margin: 0 auto 2px;
   font-family: -apple-system, system-ui, 'SF Pro Text', sans-serif;
 }
 .lvl-card {
   flex: 64;
   min-width: 0;
   text-align: left;
-  padding: 14px 16px;
+  padding: 10px 14px;
   border: 0.5px solid #F0DCA6;
-  border-radius: 22px;
+  border-radius: 16px;
   background: linear-gradient(135deg, #FFFDF8, #FFF2D2);
   box-shadow: 0 2px 10px rgba(214, 158, 30, 0.10);
   cursor: pointer;
   font: inherit;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 .lvl-card:active { transform: scale(0.99); }
 .lvl-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-.lvl-name { font-size: 24px; font-weight: 800; color: #5A3D08; line-height: 1; }
+.lvl-name { font-size: 20px; font-weight: 800; color: #5A3D08; line-height: 1; }
 .lvl-max { font-size: 13px; font-weight: 600; color: #B8944A; }
 .lvl-coins { font-size: 15px; font-weight: 800; color: #5A3D08; white-space: nowrap; }
 .lvl-track {
-  height: 10px;
+  height: 8px;
   border-radius: 999px;
   background: rgba(214, 158, 30, 0.16);
   overflow: hidden;
@@ -755,24 +755,24 @@ body {
   background: linear-gradient(90deg, #F7C246, #EF9F15);
   transition: width 0.35s ease;
 }
-.lvl-sub { font-size: 11.5px; font-weight: 600; color: #B8944A; }
+.lvl-sub { font-size: 11px; font-weight: 600; color: #B8944A; }
 
 .streak-card {
   flex: 34;
   min-width: 0;
-  padding: 10px;
+  padding: 8px;
   border: 0.5px solid #F2D68F;
-  border-radius: 22px;
+  border-radius: 16px;
   background: linear-gradient(135deg, #FEF0CE, #FBE3AF);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 1px;
 }
-.streak-fire { font-size: 20px; line-height: 1; color: #EFA315; }
-.streak-num { font-size: 24px; font-weight: 800; line-height: 1; color: #5A3D08; }
-.streak-word { font-size: 11px; font-weight: 600; color: #B8944A; }
+.streak-fire { font-size: 22px; line-height: 1; color: #EFA315; }
+.streak-num { font-size: 20px; font-weight: 800; line-height: 1; color: #5A3D08; }
+.streak-word { font-size: 10px; font-weight: 600; color: #B8944A; }
 
 /* Toast nhỏ khi chạm hoạt động bị khoá */
 .game-toast {
