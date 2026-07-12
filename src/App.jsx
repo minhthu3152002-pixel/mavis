@@ -3,7 +3,7 @@ import { track } from './lib/track';
 import { useAuth } from './lib/useAuth';
 import { buildState, fetchPetState, savePetState } from './lib/cloud';
 import { useGameState } from './game/useGameState';
-import { levelProgress, requiredStreakFor, isActivityUnlocked } from './game/config';
+import { levelProgress, pointsToNextLevel, requiredStreakFor, isActivityUnlocked } from './game/config';
 
 // Bộ hamster cũ — dùng làm fallback khi thiếu ảnh mit_*.
 import coffee from './assets/hamsters/coffee.png';
@@ -343,7 +343,7 @@ function HomeTab({
   rings, dragHint,
   onItemDown, onItemMove, onItemUp,
   showNotifCta, iosNeedsInstall, enableNotify,
-  level, coins, levelPct, streak, onOpenStats,
+  level, coins, levelPct, pointsToNext, streak, onOpenStats,
 }) {
   const [toast, setToast] = useState('');
   const toastTimer = useRef(null);
@@ -353,26 +353,36 @@ function HomeTab({
     toastTimer.current = setTimeout(() => setToast(''), 2000);
   };
 
-  // Thanh level trên cùng — bọc phòng lỗi, lỗi thì ẩn (app vẫn chạy).
-  let levelBar = null;
+  // Khu header level: 2 thẻ (level + chuỗi). Bọc phòng lỗi, lỗi thì ẩn (app vẫn chạy).
+  let levelHeader = null;
   try {
     if (typeof level === 'number') {
       const pct = Math.max(0, Math.min(100, Number(levelPct) || 0));
-      levelBar = (
-        <button className="levelbar" onClick={onOpenStats} aria-label="Xem chỉ số">
-          <span className="levelbar-lv">Lv {level}</span>
-          <span className="levelbar-track">
-            <span className="levelbar-fill" style={{ width: `${pct}%` }} />
-          </span>
-          <span className="levelbar-coins">🪙 {coins ?? 0}</span>
-        </button>
+      levelHeader = (
+        <div className="lvl-header">
+          <button className="lvl-card" onClick={onOpenStats} aria-label="Xem chỉ số">
+            <div className="lvl-top">
+              <span className="lvl-name">Lv {level}<span className="lvl-max"> / 50</span></span>
+              <span className="lvl-coins">🪙 {coins ?? 0}</span>
+            </div>
+            <div className="lvl-track"><div className="lvl-fill" style={{ width: `${pct}%` }} /></div>
+            {typeof pointsToNext === 'number' && pointsToNext > 0 && (
+              <div className="lvl-sub">Còn {pointsToNext} điểm lên Lv {level + 1}</div>
+            )}
+          </button>
+          <div className="streak-card">
+            <span className="streak-fire">🔥</span>
+            <span className="streak-num">{streak ?? 0}</span>
+            <span className="streak-word">chuỗi</span>
+          </div>
+        </div>
       );
     }
-  } catch { levelBar = null; }
+  } catch { levelHeader = null; }
 
   return (
     <div className="tab-view home">
-      {levelBar}
+      {levelHeader}
       <div className="stage-wrap">
         <div className="bubble" key={bubbleText}>{bubbleText}</div>
 
@@ -398,7 +408,6 @@ function HomeTab({
           <Ring icon="🍚" label="Ăn" filled={rings.ate} />
           <Ring icon="💧" label="Nước" filled={rings.drank} />
           <Ring icon="🫶" label="Vuốt ve" filled={rings.petted} />
-          <Ring icon={<span className="ring-num">{rings.streak}</span>} label="chuỗi 🔥" filled={rings.streak > 0} />
         </div>
 
         <div className="drag-hint">{dragHint}</div>
@@ -903,7 +912,6 @@ export default function App() {
     <div className="app">
       <header className="appbar">
         <div className="appbar-title">{headerTitle}</div>
-        <div className="streak-pill">🔥 {streak}</div>
       </header>
 
       {showLoginBanner && (
@@ -937,6 +945,7 @@ export default function App() {
           level={game.level}
           coins={game.coins}
           levelPct={levelProgress(game.stats)}
+          pointsToNext={pointsToNextLevel(game.stats)}
           streak={streak}
           onOpenStats={() => setShowStats(true)}
         />

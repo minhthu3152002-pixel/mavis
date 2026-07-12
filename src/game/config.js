@@ -41,6 +41,18 @@ export function levelProgress(stats) {
   return clamp((avg % 2) / 2 * 100, 0, 100);
 }
 
+// Số "điểm" (tổng chỉ số) còn thiếu để lên level kế. null nếu đã max.
+export function pointsToNextLevel(stats) {
+  const iq = stats?.iq || 0;
+  const eq = stats?.eq || 0;
+  const physical = stats?.physical || 0;
+  const level = computeLevel(stats);
+  if (level >= LEVEL_MAX) return null;
+  const avg = (iq + eq + physical) / 3;
+  const targetAvg = (level + 1) * 2; // avg cần đạt để lên level kế
+  return Math.max(0, Math.ceil((targetAvg - avg) * 3));
+}
+
 // ===== Giai đoạn 2: mở khoá hoạt động theo chuỗi (streak) =====
 // Mốc chuỗi -> danh sách key hoạt động được mở. Key khớp ACTIVITIES (chỉnh sau).
 export const STREAK_UNLOCKS = {
